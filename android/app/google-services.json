@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "253023963463",
+    "project_id": "bazaarshodai-1b01a",
+    "storage_bucket": "bazaarshodai-1b01a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253023963463:android:bc4f96790f75cb44d96462",
+        "android_client_info": {
+          "package_name": "com.bazaarshodai.bazaar_shodai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqDOfKVjb4ayQ8MboP7M9OEhzlqD4rxlM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
