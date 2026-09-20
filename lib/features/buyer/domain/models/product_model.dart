@@ -9,6 +9,7 @@ class ProductModel {
   final double? originalPrice;
   final int stock;
   final String category;
+  final String unit;
   final List<String> imageUrls;
   final String sellerId;
   final String sellerName;
@@ -25,6 +26,7 @@ class ProductModel {
     this.originalPrice,
     required this.stock,
     required this.category,
+    this.unit = '1 kg',
     required this.imageUrls,
     required this.sellerId,
     required this.sellerName,
@@ -91,6 +93,7 @@ class ProductModel {
       originalPrice: parsedOriginalPrice,
       stock: parsedStock,
       category: map['category'] as String? ?? '',
+      unit: map['unit'] as String? ?? '1 kg',
       imageUrls: parsedImageUrls,
       sellerId: map['sellerId'] as String? ?? '',
       sellerName: map['sellerName'] as String? ?? '',
@@ -110,6 +113,7 @@ class ProductModel {
       if (originalPrice != null) 'originalPrice': originalPrice,
       'stock': stock,
       'category': category,
+      'unit': unit,
       'imageUrls': imageUrls,
       'sellerId': sellerId,
       'sellerName': sellerName,
@@ -128,6 +132,7 @@ class ProductModel {
     double? originalPrice,
     int? stock,
     String? category,
+    String? unit,
     List<String>? imageUrls,
     String? sellerId,
     String? sellerName,
@@ -144,6 +149,7 @@ class ProductModel {
       originalPrice: originalPrice ?? this.originalPrice,
       stock: stock ?? this.stock,
       category: category ?? this.category,
+      unit: unit ?? this.unit,
       imageUrls: imageUrls ?? this.imageUrls,
       sellerId: sellerId ?? this.sellerId,
       sellerName: sellerName ?? this.sellerName,
@@ -165,6 +171,7 @@ class ProductModel {
         other.originalPrice == originalPrice &&
         other.stock == stock &&
         other.category == category &&
+        other.unit == unit &&
         other.sellerId == sellerId &&
         other.sellerName == sellerName &&
         other.rating == rating &&
@@ -179,9 +186,10 @@ class ProductModel {
       price.hashCode ^
       stock.hashCode ^
       category.hashCode ^
+      unit.hashCode ^
       sellerId.hashCode;
 
   @override
   String toString() =>
-      'ProductModel(id: $id, title: $title, price: $price, originalPrice: $originalPrice, stock: $stock, category: $category)';
+      'ProductModel(id: $id, title: $title, price: $price, originalPrice: $originalPrice, stock: $stock, category: $category, unit: $unit)';
 }

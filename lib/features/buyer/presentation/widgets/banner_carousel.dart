@@ -22,10 +22,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
       'tagline': 'Taste the Pride of Bangladesh',
       'title': 'Padma Hilsa\nSpecial',
       'subtitle': 'Fresh. Authentic. From our rivers to your table.',
-      'badge': 'Up to\n20%\nOFF',
       'buttonText': 'Shop Now →',
       'bgGradient': const [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF025949)],
-      'badgeColor': const Color(0xFF059669),
       'buttonColor': const Color(0xFFD97706),
       'icon': Icons.set_meal_rounded,
     },
@@ -33,10 +31,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
       'tagline': '100% Organic & Direct from Farm',
       'title': 'Bogura Fresh\nVegetables',
       'subtitle': 'Naturally harvested every morning without preservatives.',
-      'badge': 'Fresh\nDeal\n15% OFF',
       'buttonText': 'Explore →',
       'bgGradient': const [Color(0xFF0F766E), Color(0xFF115E59), Color(0xFF134E4A)],
-      'badgeColor': const Color(0xFF0D9488),
       'buttonColor': const Color(0xFFD97706),
       'icon': Icons.eco_rounded,
     },
@@ -44,10 +40,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
       'tagline': 'Pure Heritage & Authentic Taste',
       'title': 'Ghani Bhanga\nMustard Oil',
       'subtitle': 'Cold-pressed naturally with pungent traditional aroma.',
-      'badge': 'Save\n৳ 40\nTODAY',
       'buttonText': 'Order Now →',
       'bgGradient': const [Color(0xFF78350F), Color(0xFF92400E), Color(0xFFB45309)],
-      'badgeColor': const Color(0xFFB45309),
       'buttonColor': const Color(0xFF059669),
       'icon': Icons.water_drop_rounded,
     },
@@ -123,43 +117,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
                         ),
                       ),
 
-                      // Circular discount badge on right
-                      Positioned(
-                        right: 18,
-                        top: 40,
-                        child: Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: banner['badgeColor'] as Color,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              banner['badge'] as String,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 11,
-                                height: 1.15,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Left Content text
+                      // Content text & responsive CTA button
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 16, 90, 16),
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -196,26 +156,42 @@ class _BannerCarouselState extends State<BannerCarousel> {
                             ),
                             const SizedBox(height: 10),
 
-                            // CTA button
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: banner['buttonColor'] as Color,
+                            // Responsive CTA button
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(banner['buttonText'] as String),
+                                      duration: const Duration(milliseconds: 1500),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                },
                                 borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: banner['buttonColor'] as Color,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.2),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              child: Text(
-                                banner['buttonText'] as String,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  child: Text(
+                                    banner['buttonText'] as String,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

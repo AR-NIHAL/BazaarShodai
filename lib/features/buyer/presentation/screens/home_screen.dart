@@ -8,6 +8,7 @@ import '../providers/buyer_providers.dart';
 import '../widgets/banner_carousel.dart';
 import '../widgets/category_selector.dart';
 import '../widgets/product_card.dart';
+import 'profile_screen.dart';
 
 /// Production Home Screen for BazaarShodai buyers matching the official reference mockup.
 /// Features:
@@ -40,6 +41,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final productsAsync = ref.watch(productsStreamProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final searchQuery = ref.watch(searchQueryProvider);
+    final authUser = ref.watch(authStateChangesProvider).value;
+    final userProfileAsync = ref.watch(currentUserProfileStreamProvider);
+    final user = userProfileAsync.asData?.value;
+    final displayName = user?.name.isNotEmpty == true
+        ? user!.name
+        : (authUser?.displayName?.isNotEmpty == true ? authUser!.displayName! : '');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBFDFA),
@@ -121,51 +128,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
 
-                      // Notification Bell with Badge
-                      Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.notifications_none_rounded,
-                                color: Color(0xFF0F172A),
-                                size: 22,
-                              ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('No new notifications right now.'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          Positioned(
-                            right: 4,
-                            top: 4,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEF4444),
+                      // Profile Avatar / Icon (Whoever joins, their profile is shown)
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(22),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: authUser != null
+                                    ? const Color(0xFFD1FAE5)
+                                    : Colors.white,
                                 shape: BoxShape.circle,
-                              ),
-                              child: const Text(
-                                '1',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                                border: Border.all(
+                                  color: authUser != null
+                                      ? AppColors.primary
+                                      : const Color(0xFFE2E8F0),
+                                  width: 1.5,
                                 ),
                               ),
+                              child: Center(
+                                child: authUser != null
+                                    ? Text(
+                                        displayName.isNotEmpty
+                                            ? displayName[0].toUpperCase()
+                                            : 'U',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.person_outline,
+                                        color: Color(0xFF0F172A),
+                                        size: 22,
+                                      ),
+                              ),
                             ),
-                          ),
-                        ],
+                            if (authUser != null)
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 11,
+                                  height: 11,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -469,7 +492,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     sliver: SliverGrid(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.65,
+                        childAspectRatio: 0.68,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
                       ),
@@ -499,7 +522,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.65,
+                      childAspectRatio: 0.68,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
