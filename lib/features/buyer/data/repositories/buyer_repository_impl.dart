@@ -79,7 +79,7 @@ class BuyerRepositoryImpl implements BuyerRepository {
           id: 'cat_vegetables',
           name: 'Vegetables',
           icon: 'eco',
-          imageUrl: '',
+          imageUrl: 'assets/images/categories/vegetables.jpg',
         ),
         const CategoryModel(
           id: 'cat_fruits',
@@ -91,19 +91,19 @@ class BuyerRepositoryImpl implements BuyerRepository {
           id: 'cat_fish_meat',
           name: 'Fish & Meat',
           icon: 'set_meal',
-          imageUrl: '',
+          imageUrl: 'assets/images/categories/fish_meat.jpg',
         ),
         const CategoryModel(
           id: 'cat_spices_oil',
           name: 'Spices & Oil',
           icon: 'grain',
-          imageUrl: '',
+          imageUrl: 'assets/images/categories/spices_oil.jpg',
         ),
         const CategoryModel(
           id: 'cat_dairy_eggs',
           name: 'Dairy & Eggs',
           icon: 'egg',
-          imageUrl: '',
+          imageUrl: 'assets/images/categories/dairy_eggs.jpg',
         ),
         const CategoryModel(
           id: 'cat_rice_grains',
