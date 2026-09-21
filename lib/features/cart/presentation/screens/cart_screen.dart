@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../buyer/presentation/widgets/auth_prompt_sheet.dart';
 import '../../../checkout/presentation/screens/checkout_screen.dart';
 import '../../domain/models/cart_item_model.dart';
 import '../../domain/models/cart_state.dart';
@@ -56,6 +58,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authStateChangesProvider);
     final cartState = ref.watch(cartProvider);
 
     if (cartState.isEmpty) {
@@ -666,7 +669,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  void _handleProceedToCheckout(CartState cartState) {
+  Future<void> _handleProceedToCheckout(CartState cartState) async {
+    final authUser = ref.read(authStateChangesProvider).value;
+    if (authUser == null) {
+      final loggedIn = await AuthPromptSheet.show(
+        context,
+        title: 'Sign In to Checkout',
+        message:
+            'Please sign in or create an account to place your grocery order and track live delivery.',
+      );
+      if (loggedIn != true || !mounted) return;
+    }
+
+    if (!mounted) return;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const CheckoutScreen(),

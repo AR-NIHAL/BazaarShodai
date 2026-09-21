@@ -3,6 +3,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../auth/presentation/screens/signup_screen.dart';
 
+enum _AuthAction { signIn, signUp }
+
 /// An elegant modal bottom sheet prompting unauthenticated guests to sign in or register
 /// when attempting protected actions like adding to cart, saving to wishlist, or checking out.
 class AuthPromptSheet extends StatelessWidget {
@@ -17,12 +19,13 @@ class AuthPromptSheet extends StatelessWidget {
   });
 
   /// Convenient helper to display the modal bottom sheet from any widget context.
+  /// Returns `true` if the user successfully signed in or registered.
   static Future<bool?> show(
     BuildContext context, {
     String? title,
     String? message,
-  }) {
-    return showModalBottomSheet<bool>(
+  }) async {
+    final action = await showModalBottomSheet<_AuthAction>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -32,6 +35,23 @@ class AuthPromptSheet extends StatelessWidget {
             'Create a free account or sign in to save items to your wishlist, place grocery orders, and enjoy direct doorstep delivery.',
       ),
     );
+
+    if (action == null || !context.mounted) {
+      return false;
+    }
+
+    bool? success;
+    if (action == _AuthAction.signIn) {
+      success = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } else if (action == _AuthAction.signUp) {
+      success = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const SignupScreen()),
+      );
+    }
+
+    return success == true;
   }
 
   @override
@@ -112,24 +132,14 @@ class AuthPromptSheet extends StatelessWidget {
 
             // Primary Action: Sign In
             ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
+              onPressed: () => Navigator.of(context).pop(_AuthAction.signIn),
               child: const Text('Sign In to My Account'),
             ),
             const SizedBox(height: 10),
 
             // Secondary Action: Sign Up
             OutlinedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SignupScreen()),
-                );
-              },
+              onPressed: () => Navigator.of(context).pop(_AuthAction.signUp),
               child: const Text('Create New Account'),
             ),
             const SizedBox(height: 12),

@@ -559,9 +559,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              '(${slot.timeRange})',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            Flexible(
+                              child: Text(
+                                '(${slot.timeRange})',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
