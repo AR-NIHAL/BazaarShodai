@@ -68,6 +68,12 @@ flutter:
   assets:
     - assets/images/
     - assets/images/categories/
+    - assets/images/onboarding_1.jpg
+    - assets/images/onboarding_2.jpg
+    - assets/images/onboarding_3.jpg
+    - assets/images/banner_mustard_oil.jpg
+    - assets/images/banner_padma_hilsa.jpg
+    - assets/images/banner_vegetables.jpg
     - assets/images/logo.png
     - .env
 
