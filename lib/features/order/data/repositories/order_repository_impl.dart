@@ -71,73 +71,120 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   @override
-  Stream<List<OrderModel>> streamBuyerOrders(String buyerId) {
-    // If Firestore is null, buyerId is empty, or guest, stream purely from local storage
+  Stream<List<OrderModel>> streamBuyerOrders(String buyerId) async* {
+    yield await _getLocalOrders();
+
     if (_ordersCollection == null ||
         buyerId.isEmpty ||
         buyerId == 'current_user' ||
         buyerId.startsWith('guest_')) {
-      return Stream.fromFuture(_getLocalOrders());
+      return;
     }
 
-    return _ordersCollection!
-        .where('buyerId', isEqualTo: buyerId)
-        .snapshots()
-        .asyncMap((snapshot) async {
-      final remoteOrders = snapshot.docs
-          .map((doc) => OrderModel.fromMap(doc.data(), documentId: doc.id))
-          .toList();
+    try {
+      final remoteStream = _ordersCollection!
+          .where('buyerId', isEqualTo: buyerId)
+          .snapshots();
 
-      final localOrders = await _getLocalOrders();
-      final Map<String, OrderModel> orderMap = {};
+      await for (final snapshot in remoteStream) {
+        final remoteOrders = snapshot.docs
+            .map((doc) => OrderModel.fromMap(doc.data(), documentId: doc.id))
+            .toList();
 
-      for (final o in localOrders) {
-        orderMap[o.id] = o;
+        final localOrders = await _getLocalOrders();
+        final Map<String, OrderModel> orderMap = {};
+
+        for (final o in localOrders) {
+          orderMap[o.id] = o;
+        }
+        for (final o in remoteOrders) {
+          orderMap[o.id] = o;
+        }
+
+        final list = orderMap.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        yield list;
       }
-      for (final o in remoteOrders) {
-        orderMap[o.id] = o; // remote takes precedence
-      }
-
-      final list = orderMap.values.toList();
-      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return list;
-    }).handleError((error) async {
-      // Fallback to local storage if Firestore throws index or network error
-      return await _getLocalOrders();
-    });
+    } catch (_) {
+      yield await _getLocalOrders();
+    }
   }
 
   @override
-  Stream<OrderModel?> streamOrderById(String orderId) {
-    if (_ordersCollection == null) {
-      return Stream.fromFuture(_getLocalOrders()).map((list) {
-        try {
-          return list.firstWhere((o) => o.id == orderId);
-        } catch (_) {
-          return null;
-        }
-      });
+  Stream<List<OrderModel>> streamSellerOrders(String sellerId) async* {
+    if (sellerId.isEmpty) {
+      yield [];
+      return;
     }
 
-    return _ordersCollection!.doc(orderId).snapshots().asyncMap((snap) async {
-      if (snap.exists && snap.data() != null) {
-        return OrderModel.fromMap(snap.data()!, documentId: snap.id);
+    // 1. Immediately yield local orders for instant zero-latency UI display
+    yield await _getLocalOrdersForSeller(sellerId);
+
+    if (_ordersCollection == null) {
+      return;
+    }
+
+    // 2. Stream from Firestore and merge with local storage
+    try {
+      final remoteStream = _ordersCollection!
+          .where('vendorIds', arrayContains: sellerId)
+          .snapshots();
+
+      await for (final snapshot in remoteStream) {
+        final remoteOrders = snapshot.docs
+            .map((doc) => OrderModel.fromMap(doc.data(), documentId: doc.id))
+            .toList();
+
+        final localOrders = await _getLocalOrdersForSeller(sellerId);
+        final Map<String, OrderModel> orderMap = {};
+
+        for (final o in localOrders) {
+          orderMap[o.id] = o;
+        }
+        for (final o in remoteOrders) {
+          orderMap[o.id] = o;
+        }
+
+        final list = orderMap.values.toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        yield list;
       }
-      // Fallback to local storage
-      final localOrders = await _getLocalOrders();
-      try {
-        return localOrders.firstWhere((o) => o.id == orderId);
-      } catch (_) {
-        return null;
+    } catch (_) {
+      yield await _getLocalOrdersForSeller(sellerId);
+    }
+  }
+
+  Future<List<OrderModel>> _getLocalOrdersForSeller(String sellerId) async {
+    final allLocal = await _getLocalOrders();
+    return allLocal.where((order) {
+      final hasVendorId = order.vendorIds.contains(sellerId);
+      final hasItemFromSeller = order.items.any((item) => item.sellerId == sellerId);
+      return hasVendorId || hasItemFromSeller;
+    }).toList();
+  }
+
+  @override
+  Stream<OrderModel?> streamOrderById(String orderId) async* {
+    final localOrders = await _getLocalOrders();
+    OrderModel? local;
+    try {
+      local = localOrders.firstWhere((o) => o.id == orderId);
+    } catch (_) {}
+    yield local;
+
+    if (_ordersCollection == null) return;
+
+    try {
+      await for (final snap in _ordersCollection!.doc(orderId).snapshots()) {
+        if (snap.exists && snap.data() != null) {
+          yield OrderModel.fromMap(snap.data()!, documentId: snap.id);
+        } else {
+          yield local;
+        }
       }
-    }).handleError((error) async {
-      final localOrders = await _getLocalOrders();
-      try {
-        return localOrders.firstWhere((o) => o.id == orderId);
-      } catch (_) {
-        return null;
-      }
-    });
+    } catch (_) {
+      yield local;
+    }
   }
 
   @override
@@ -170,9 +217,13 @@ class OrderRepositoryImpl implements OrderRepository {
     try {
       final jsonStr = await LocalStorageService.getOrdersJson();
       if (jsonStr == null || jsonStr.trim().isEmpty) return [];
-      final List<dynamic> list = jsonDecode(jsonStr);
-      return list
-          .map((item) => OrderModel.fromMap(item as Map<String, dynamic>))
+      dynamic decoded = jsonDecode(jsonStr);
+      if (decoded is String) {
+        decoded = jsonDecode(decoded);
+      }
+      if (decoded is! List) return [];
+      return decoded
+          .map((item) => OrderModel.fromMap(Map<String, dynamic>.from(item as Map)))
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (_) {

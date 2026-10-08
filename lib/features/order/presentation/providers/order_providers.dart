@@ -37,3 +37,10 @@ final orderTrackingStreamProvider =
   final repository = ref.watch(orderRepositoryProvider);
   return repository.streamOrderById(orderId);
 });
+
+/// StreamProvider delivering real-time list of all incoming orders for a specific seller/vendor.
+final sellerOrdersStreamProvider =
+    StreamProvider.family<List<OrderModel>, String>((ref, sellerId) {
+  final repository = ref.watch(orderRepositoryProvider);
+  return repository.streamSellerOrders(sellerId);
+});

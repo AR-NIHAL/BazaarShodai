@@ -9,6 +9,9 @@ abstract class OrderRepository {
   /// Streams the list of all orders belonging to a specific buyer.
   Stream<List<OrderModel>> streamBuyerOrders(String buyerId);
 
+  /// Streams the list of all orders containing items from a specific seller.
+  Stream<List<OrderModel>> streamSellerOrders(String sellerId);
+
   /// Streams real-time updates for a single order by ID.
   Stream<OrderModel?> streamOrderById(String orderId);
 

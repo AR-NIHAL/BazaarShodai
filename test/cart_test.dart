@@ -1,7 +1,11 @@
+import 'package:bazaar_shodai/core/theme/app_theme.dart';
+import 'package:bazaar_shodai/features/auth/presentation/providers/auth_providers.dart';
 import 'package:bazaar_shodai/features/buyer/domain/models/product_model.dart';
 import 'package:bazaar_shodai/features/cart/domain/models/cart_item_model.dart';
 import 'package:bazaar_shodai/features/cart/domain/models/cart_state.dart';
 import 'package:bazaar_shodai/features/cart/presentation/providers/cart_providers.dart';
+import 'package:bazaar_shodai/features/cart/presentation/screens/cart_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -142,4 +146,80 @@ void main() {
       expect(container.read(cartItemsCountProvider), equals(0));
     });
   });
+
+  group('CartScreen UI Rendering with AppTheme', () {
+    testWidgets('Renders all cart items, delivery bar, coupon section and order summary without layout errors',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authStateChangesProvider.overrideWithValue(const AsyncData(null)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      const product1 = ProductModel(
+        id: 'p_tomato',
+        title: 'Fresh Tomato',
+        description: 'Red ripe tomatoes',
+        price: 45.0,
+        originalPrice: 60.0,
+        stock: 10,
+        category: 'Vegetables',
+        unit: '1 kg',
+        imageUrls: ['https://example.com/tomato.png'],
+        sellerId: 's_green',
+        sellerName: 'green valley',
+      );
+
+      const product2 = ProductModel(
+        id: 'p_veg',
+        title: 'Mixed Vegetables',
+        description: 'Assorted seasonal greens',
+        price: 100.0,
+        originalPrice: 110.0,
+        stock: 50,
+        category: 'Vegetables',
+        unit: '1 kg',
+        imageUrls: ['https://example.com/veg.png'],
+        sellerId: 's_green',
+        sellerName: 'green valley',
+      );
+
+      container.read(cartProvider.notifier).addItem(product1, quantity: 2);
+      container.read(cartProvider.notifier).addItem(product2, quantity: 1);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const CartScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify header
+      expect(find.text('My Shopping Cart'), findsOneWidget);
+      expect(find.text('3 items from 1 vendor'), findsOneWidget);
+
+      // Verify both items rendered
+      expect(find.text('Fresh Tomato'), findsOneWidget);
+      expect(find.text('Mixed Vegetables'), findsOneWidget);
+
+      // Verify coupon section and Apply button
+      expect(find.text('Apply Promo Code / Coupon'), findsOneWidget);
+      expect(find.text('Apply'), findsOneWidget);
+
+      // Scroll down to reveal order summary
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+
+      // Verify order summary & payable amount
+      expect(find.text('Order Bill Summary'), findsOneWidget);
+      expect(find.text('Total Payable'), findsWidgets);
+      expect(find.text('Proceed to Checkout'), findsOneWidget);
+    });
+  });
 }
+

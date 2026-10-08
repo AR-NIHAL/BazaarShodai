@@ -124,8 +124,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final item = cartState.items.values.elementAt(index);
-                  return _buildCartItemCard(item);
+                  final itemsList = cartState.items.values.toList();
+                  if (index >= itemsList.length) return null;
+                  return _buildCartItemCard(itemsList[index]);
                 },
                 childCount: cartState.items.length,
               ),
@@ -143,14 +144,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           // 4. Order Summary Card
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: _buildOrderSummaryCard(cartState),
             ),
           ),
         ],
       ),
       // 5. Sticky Bottom Checkout Bar
-      bottomSheet: _buildStickyCheckoutBar(cartState),
+      bottomNavigationBar: _buildStickyCheckoutBar(cartState),
     );
   }
 
@@ -236,21 +237,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               width: 76,
               height: 76,
               color: const Color(0xFFF1F5F9),
-              child: item.image.isNotEmpty
-                  ? Image.network(
-                      item.image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.eco_rounded,
-                        color: Color(0xFF059669),
-                        size: 32,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.eco_rounded,
-                      color: Color(0xFF059669),
-                      size: 32,
-                    ),
+              child: _buildItemImage(item.image),
             ),
           ),
           const SizedBox(width: 14),
@@ -306,7 +293,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             color: Color(0xFFDC2626),
                           ),
                         ),
-                        if (item.hasDiscount)
+                        if (item.hasDiscount && item.originalPrice != null)
                           Text(
                             '৳ ${item.originalPrice!.toStringAsFixed(0)}',
                             style: const TextStyle(
@@ -374,6 +361,36 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildItemImage(String image) {
+    if (image.isEmpty) {
+      return const Icon(
+        Icons.eco_rounded,
+        color: Color(0xFF059669),
+        size: 32,
+      );
+    }
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return Image.network(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const Icon(
+          Icons.eco_rounded,
+          color: Color(0xFF059669),
+          size: 32,
+        ),
+      );
+    }
+    return Image.asset(
+      image,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const Icon(
+        Icons.eco_rounded,
+        color: Color(0xFF059669),
+        size: 32,
       ),
     );
   }
@@ -480,6 +497,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   onPressed: _isApplyingCoupon ? null : _handleApplyCoupon,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    minimumSize: const Size(80, 44),
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
