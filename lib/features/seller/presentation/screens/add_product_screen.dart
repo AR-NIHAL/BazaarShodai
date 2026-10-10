@@ -9,7 +9,8 @@ import '../../../buyer/domain/models/product_model.dart';
 import '../providers/seller_providers.dart';
 
 /// Screen allowing verified merchants to publish new grocery/produce items
-/// with camera/gallery photo upload via Cloudinary.
+/// with multiple photo uploads, video URL link, Bengali subtitle, origin,
+/// and category-specific options (custom fish cuts for fish/meat, package sizes for veg/fruit).
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
 
@@ -20,14 +21,17 @@ class AddProductScreen extends ConsumerStatefulWidget {
 class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _bengaliTitleController = TextEditingController();
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
   final _originalPriceController = TextEditingController();
   final _stockController = TextEditingController();
+  final _originController = TextEditingController();
+  final _videoUrlController = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
-  XFile? _selectedImage;
-  Uint8List? _imageBytes;
+  final List<XFile> _selectedImages = [];
+  final List<Uint8List> _imageBytesList = [];
 
   String _selectedCategory = 'Vegetables';
   final List<String> _categories = [
@@ -47,15 +51,28 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _bengaliTitleController.dispose();
     _descController.dispose();
     _priceController.dispose();
     _originalPriceController.dispose();
     _stockController.dispose();
+    _originController.dispose();
+    _videoUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage(ImageSource source) async {
     try {
+      if (_selectedImages.length >= 4) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 4 photos allowed per product.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
       final pickedFile = await _picker.pickImage(
         source: source,
         maxWidth: 1200,
@@ -66,8 +83,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       if (pickedFile != null) {
         final bytes = await pickedFile.readAsBytes();
         setState(() {
-          _selectedImage = pickedFile;
-          _imageBytes = bytes;
+          _selectedImages.add(pickedFile);
+          _imageBytesList.add(bytes);
         });
       }
     } catch (e) {
@@ -79,6 +96,13 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         ),
       );
     }
+  }
+
+  void _removeImageAt(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+      _imageBytesList.removeAt(index);
+    });
   }
 
   void _showImageSourceSheet() {
@@ -94,7 +118,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Select Product Photo',
+                'Add Product Photo',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -122,10 +146,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   }
 
   Future<void> _handlePublishProduct() async {
-    if (_selectedImage == null || _imageBytes == null) {
+    if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a product photo before publishing.'),
+          content: Text('Please select at least one product photo before publishing.'),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -138,12 +162,19 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
     setState(() {
       _isSubmitting = true;
-      _uploadStatus = 'Uploading photo to free cloud storage...';
+      _uploadStatus = 'Uploading photos to cloud storage...';
     });
 
     try {
-      // 1. Upload photo to Cloudinary
-      final cloudImageUrl = await CloudImageService.uploadImage(_selectedImage!);
+      // 1. Upload photos to ImgBB / Cloudinary
+      final List<String> uploadedUrls = [];
+      for (int i = 0; i < _selectedImages.length; i++) {
+        setState(() {
+          _uploadStatus = 'Uploading photo ${i + 1} of ${_selectedImages.length}...';
+        });
+        final url = await CloudImageService.uploadImage(_selectedImages[i]);
+        uploadedUrls.add(url);
+      }
 
       if (!mounted) return;
       setState(() {
@@ -166,16 +197,29 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       }
       final stock = int.parse(_stockController.text.trim());
 
+      final bengaliTitle = _bengaliTitleController.text.trim().isNotEmpty
+          ? _bengaliTitleController.text.trim()
+          : null;
+      final origin = _originController.text.trim().isNotEmpty
+          ? _originController.text.trim()
+          : null;
+      final videoUrl = _videoUrlController.text.trim().isNotEmpty
+          ? _videoUrlController.text.trim()
+          : null;
+
       // 3. Create Product Domain Entity
       final product = ProductModel(
         id: '', // Will be assigned documentId in repository
         title: _titleController.text.trim(),
+        bengaliTitle: bengaliTitle,
         description: _descController.text.trim(),
         price: price,
         originalPrice: originalPrice,
         stock: stock,
         category: _selectedCategory,
-        imageUrls: [cloudImageUrl],
+        imageUrls: uploadedUrls,
+        videoUrl: videoUrl,
+        origin: origin,
         sellerId: sellerId,
         sellerName: sellerName,
         rating: 5.0,
@@ -227,6 +271,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isFishOrMeat = _selectedCategory == 'Fish & Meat';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add New Product'),
@@ -239,92 +285,157 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Image Picker Container
-                GestureDetector(
-                  onTap: _isSubmitting ? null : _showImageSourceSheet,
-                  child: Container(
-                    height: 190,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: _imageBytes != null ? AppColors.primary : AppColors.border,
-                        width: 1.5,
+                // 1. Multiple Images Picker Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Product Photos (Up to 4)',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '${_selectedImages.length}/4 Photos',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                if (_selectedImages.isEmpty)
+                  GestureDetector(
+                    onTap: _isSubmitting ? null : _showImageSourceSheet,
+                    child: Container(
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySurface,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.add_a_photo_outlined,
+                              size: 26,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Add Product Photos',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tap to choose from Gallery or Camera',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: _imageBytes != null
-                        ? Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ClipRRect(
+                  )
+                else
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _selectedImages.length + (_selectedImages.length < 4 ? 1 : 0),
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        if (index == _selectedImages.length) {
+                          return GestureDetector(
+                            onTap: _isSubmitting ? null : _showImageSourceSheet,
+                            child: Container(
+                              width: 100,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceVariant,
                                 borderRadius: BorderRadius.circular(14),
-                                child: Image.memory(
-                                  _imageBytes!,
-                                  fit: BoxFit.cover,
-                                ),
+                                border: Border.all(color: AppColors.border),
                               ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_photo_alternate_outlined, color: AppColors.primary),
+                                  SizedBox(height: 4),
+                                  Text('Add More', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.memory(
+                                _imageBytesList[index],
+                                width: 100,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: InkWell(
+                                onTap: _isSubmitting ? null : () => _removeImageAt(index),
                                 child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.6),
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.white, size: 18),
-                                    onPressed: _showImageSourceSheet,
-                                  ),
+                                  child: const Icon(Icons.close, size: 14, color: Colors.white),
                                 ),
                               ),
-                            ],
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primarySurface,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.add_a_photo_outlined,
-                                  size: 32,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Upload Product Photo',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Tap to choose from Gallery or Camera',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+
+                const SizedBox(height: 18),
+
+                // 2. Video Link Field
+                TextFormField(
+                  controller: _videoUrlController,
+                  enabled: !_isSubmitting,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'Video URL (Optional)',
+                    hintText: 'e.g. https://... or YouTube video link',
+                    prefixIcon: Icon(Icons.videocam_outlined),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Product Title
+                // 3. Product Title (English)
                 TextFormField(
                   controller: _titleController,
                   textCapitalization: TextCapitalization.words,
                   enabled: !_isSubmitting,
                   decoration: const InputDecoration(
-                    labelText: 'Product Title',
-                    hintText: 'e.g. Fresh Organic Red Tomato 1kg',
+                    labelText: 'Product Title (English)',
+                    hintText: 'e.g. Fresh Padma River Hilsa',
                     prefixIcon: Icon(Icons.shopping_bag_outlined),
                   ),
                   validator: (val) {
@@ -339,7 +450,31 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Category Dropdown
+                // 4. Bengali Title (Optional)
+                TextFormField(
+                  controller: _bengaliTitleController,
+                  enabled: !_isSubmitting,
+                  decoration: const InputDecoration(
+                    labelText: 'বাংলা শিরোনাম / Bengali Subtitle (Optional)',
+                    hintText: 'e.g. তাজা পদ্মা নদীর রূপালী ইলিশ',
+                    prefixIcon: Icon(Icons.translate_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 5. Origin / Farm Harvest Region
+                TextFormField(
+                  controller: _originController,
+                  enabled: !_isSubmitting,
+                  decoration: const InputDecoration(
+                    labelText: 'Harvest Origin / Region (Optional)',
+                    hintText: 'e.g. Chandpur Mohona Confluence, Padma River',
+                    prefixIcon: Icon(Icons.place_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 6. Category Dropdown
                 DropdownButtonFormField<String>(
                   initialValue: _selectedCategory,
                   decoration: const InputDecoration(
@@ -362,7 +497,42 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Price and Original Price Row
+                // Category-Smart Info Notice
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isFishOrMeat ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isFishOrMeat ? const Color(0xFFBFDBFE) : const Color(0xFFA7F3D0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isFishOrMeat ? Icons.set_meal_outlined : Icons.eco_outlined,
+                        color: isFishOrMeat ? const Color(0xFF1E40AF) : const Color(0xFF065F46),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isFishOrMeat
+                            ? 'Fish & Meat options: Customers will be able to select piece weights & custom cuts (Whole, Curry Cut, Head+Steak).'
+                            : 'Produce options: Customers will see convenient package weight tiers (500g, 1kg, 2kg, 5kg).',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isFishOrMeat ? const Color(0xFF1E40AF) : const Color(0xFF065F46),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 7. Price & Original Price Row
                 Row(
                   children: [
                     Expanded(
@@ -372,7 +542,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                         enabled: !_isSubmitting,
                         decoration: const InputDecoration(
                           labelText: 'Price (৳)',
-                          hintText: 'e.g. 65',
+                          hintText: 'e.g. 1450',
                           prefixIcon: Icon(Icons.payments_outlined),
                         ),
                         validator: (val) {
@@ -395,7 +565,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                         enabled: !_isSubmitting,
                         decoration: const InputDecoration(
                           labelText: 'Original Price (৳)',
-                          hintText: 'e.g. 80 (Optional)',
+                          hintText: 'e.g. 1750 (Optional)',
                           prefixIcon: Icon(Icons.discount_outlined),
                         ),
                         validator: (val) {
@@ -417,7 +587,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Stock Quantity
+                // 8. Stock Quantity
                 TextFormField(
                   controller: _stockController,
                   keyboardType: TextInputType.number,
@@ -440,19 +610,18 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Product Description
+                // 9. Product Description
                 TextFormField(
                   controller: _descController,
                   maxLines: 4,
                   enabled: !_isSubmitting,
                   decoration: const InputDecoration(
                     labelText: 'Product Description',
-                    hintText: 'Describe freshness, farm source, origin, packaging, etc.',
-                    alignLabelWithHint: true,
+                    hintText: 'Describe freshness, farm source, origin, packaging, cold-chain, etc.',
                   ),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
-                      return 'Enter product description';
+                      return 'Please provide a product description';
                     }
                     if (val.trim().length < 10) {
                       return 'Description must be at least 10 characters';
@@ -460,43 +629,51 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // Submit Button / Progress Indicator
-                if (_isSubmitting)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySurface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.primaryLight),
-                    ),
-                    child: Column(
+                // 10. Status Message when Uploading
+                if (_uploadStatus.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(width: 10),
                         Text(
                           _uploadStatus,
-                          textAlign: TextAlign.center,
                           style: const TextStyle(
+                            color: AppColors.primary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.primaryDark,
                           ),
                         ),
                       ],
                     ),
-                  )
-                else
-                  ElevatedButton.icon(
-                    onPressed: _handlePublishProduct,
-                    icon: const Icon(Icons.cloud_upload_outlined),
-                    label: const Text('Publish Product to Marketplace'),
                   ),
+                ],
+
+                // 11. Submit Button
+                ElevatedButton(
+                  onPressed: _isSubmitting ? null : _handlePublishProduct,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Publish Product to Marketplace',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
               ],
             ),
           ),

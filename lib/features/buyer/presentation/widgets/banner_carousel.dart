@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../providers/buyer_providers.dart';
 
 /// Promotional hero banner carousel for BazaarShodai buyers.
@@ -290,6 +289,37 @@ class _BannerCarouselState extends ConsumerState<BannerCarousel> {
                               ),
                             ),
                           ),
+
+                          // 4. Indicator Dots / Micro-Pills inside Banner Card (Bottom-Right)
+                          Positioned(
+                            bottom: 12,
+                            right: 14,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.28),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: List.generate(_banners.length, (dotIndex) {
+                                  final isActive = dotIndex == _currentPage;
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                    height: 4,
+                                    width: isActive ? 14 : 4,
+                                    decoration: BoxDecoration(
+                                      color: isActive
+                                          ? Colors.white
+                                          : Colors.white.withValues(alpha: 0.45),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -298,25 +328,6 @@ class _BannerCarouselState extends ConsumerState<BannerCarousel> {
               );
             },
           ),
-        ),
-        const SizedBox(height: 10),
-
-        // Indicator Dots / Micro-Pills
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (index) {
-            final isActive = index == _currentPage;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              height: 5,
-              width: isActive ? 20 : 6,
-              decoration: BoxDecoration(
-                color: isActive ? AppColors.primary : AppColors.border,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
         ),
       ],
     );

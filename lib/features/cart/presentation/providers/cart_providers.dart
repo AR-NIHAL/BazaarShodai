@@ -42,12 +42,20 @@ class CartNotifier extends Notifier<CartState> {
   }
 
   /// Adds a product to the cart or increments if already present.
+  /// Adds a product to the cart or increments if already present.
   /// Returns a record `(bool success, String message)` for UI feedback.
-  (bool, String) addItem(ProductModel product, {int quantity = 1}) {
+  (bool, String) addItem(
+    ProductModel product, {
+    int quantity = 1,
+    double? unitPrice,
+    String? selectedOption,
+    String? selectedCut,
+  }) {
     if (product.stock <= 0) {
       return (false, '${product.title} is currently out of stock.');
     }
 
+    final effectivePrice = unitPrice ?? product.price;
     final currentItem = state.items[product.id];
     final currentQty = currentItem?.quantity ?? 0;
     final newQty = currentQty + quantity;
@@ -61,13 +69,15 @@ class CartNotifier extends Notifier<CartState> {
       productId: product.id,
       title: product.title,
       image: product.primaryImage,
-      price: product.price,
+      price: effectivePrice,
       originalPrice: product.originalPrice,
       quantity: newQty,
-      unit: product.unit.isNotEmpty ? product.unit : '1 kg',
+      unit: selectedOption ?? (product.unit.isNotEmpty ? product.unit : '1 kg'),
       sellerId: product.sellerId,
       sellerName: product.sellerName.isNotEmpty ? product.sellerName : 'Verified Vendor',
       stock: product.stock,
+      selectedOption: selectedOption,
+      selectedCut: selectedCut,
     );
 
     state = state.copyWith(items: updatedItems);

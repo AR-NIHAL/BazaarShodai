@@ -10,6 +10,8 @@ class CartItemModel {
   final String sellerId;
   final String sellerName;
   final int stock;
+  final String? selectedOption;
+  final String? selectedCut;
 
   const CartItemModel({
     required this.productId,
@@ -22,6 +24,8 @@ class CartItemModel {
     required this.sellerId,
     required this.sellerName,
     this.stock = 999,
+    this.selectedOption,
+    this.selectedCut,
   });
 
   /// Total price for this line item (effective unit price * quantity)
@@ -47,6 +51,8 @@ class CartItemModel {
     String? sellerId,
     String? sellerName,
     int? stock,
+    String? selectedOption,
+    String? selectedCut,
   }) {
     return CartItemModel(
       productId: productId ?? this.productId,
@@ -59,6 +65,8 @@ class CartItemModel {
       sellerId: sellerId ?? this.sellerId,
       sellerName: sellerName ?? this.sellerName,
       stock: stock ?? this.stock,
+      selectedOption: selectedOption ?? this.selectedOption,
+      selectedCut: selectedCut ?? this.selectedCut,
     );
   }
 
@@ -68,12 +76,14 @@ class CartItemModel {
       'title': title,
       'image': image,
       'price': price,
-      'originalPrice': originalPrice,
+      if (originalPrice != null) 'originalPrice': originalPrice,
       'quantity': quantity,
       'unit': unit,
       'sellerId': sellerId,
       'sellerName': sellerName,
       'stock': stock,
+      if (selectedOption != null) 'selectedOption': selectedOption,
+      if (selectedCut != null) 'selectedCut': selectedCut,
     };
   }
 
@@ -89,6 +99,8 @@ class CartItemModel {
       sellerId: map['sellerId'] as String? ?? '',
       sellerName: map['sellerName'] as String? ?? 'Verified Vendor',
       stock: (map['stock'] as num?)?.toInt() ?? 999,
+      selectedOption: map['selectedOption'] as String?,
+      selectedCut: map['selectedCut'] as String?,
     );
   }
 }

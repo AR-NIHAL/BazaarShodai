@@ -6,13 +6,17 @@ import '../../../cart/presentation/providers/cart_providers.dart';
 import '../../domain/models/product_model.dart';
 import 'auth_prompt_sheet.dart';
 
-/// Pixel-perfect Product Card matching BazaarShodai reference design:
-/// - Full upper portion filled by product image (no blank spaces)
-/// - Red discount pill badge (-20%) on top-left
-/// - Crisp white heart outline wishlist button on top-right with soft shadow
-/// - Tightly grouped details: Title, Farmer Avatar + Store + Verified Badge (✔)
-/// - Red Bengali currency price (৳ 80) + Strikethrough original price (৳ 100)
-/// - Emerald green '+ Add' button with touch ripple & interactive quantity stepper
+/// Redesigned Product Card matching BazaarShodai reference design:
+/// - Full upper portion filled by product image with rounded top corners
+/// - Red discount pill badge (-X% OFF) on top-left
+/// - Circular white heart outline wishlist button on top-right with soft shadow
+/// - Dynamic 'X left in stock' badge on bottom-left of image when stock <= 5
+/// - Vendor name + emerald verified badge (✔)
+/// - Bold 2-line title with high contrast
+/// - Unit specification (1 kg, etc.) + Star rating display (★ 4.9)
+/// - Bold Bangladeshi currency price (৳ 1,450) + Strikethrough original price (৳ 1,750)
+/// - Emerald green '+ Add' button with shopping cart icon
+/// - Mint green interactive stepper when added to cart
 /// - Responsive dark mode support & guest authentication protection
 class ProductCard extends ConsumerStatefulWidget {
   final ProductModel product;
@@ -151,7 +155,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
           width: 0.8,
@@ -166,38 +170,38 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           onTap: widget.onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Top Image - EXPANDED to fill upper card naturally (NO blank space)
+              // 1. Top Image with Badges
               Expanded(
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     ClipRRect(
                       borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(15)),
+                          const BorderRadius.vertical(top: Radius.circular(17)),
                       child: _buildProductImage(product),
                     ),
 
-                    // Top-Left: Red Discount Pill Badge (-20%)
+                    // Top-Left: Red Discount Pill Badge (-X% OFF)
                     if (product.hasDiscount)
                       Positioned(
                         top: 8,
                         left: 8,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3.5),
+                              horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE53935),
+                            color: const Color(0xFFDC2626),
                             borderRadius: BorderRadius.circular(6),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFE53935)
+                                color: const Color(0xFFDC2626)
                                     .withValues(alpha: 0.35),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1),
@@ -205,10 +209,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                             ],
                           ),
                           child: Text(
-                            '-${product.discountPercentage}%',
+                            '-${product.discountPercentage}% OFF',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.2,
                             ),
@@ -216,297 +220,363 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                         ),
                       ),
 
-                    // Top-Right: Crisp White Heart Outline
+                    // Top-Right: Circular White Heart Wishlist Button
                     Positioned(
-                      top: 6,
-                      right: 6,
+                      top: 7,
+                      right: 7,
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: _handleWishlistToggle,
                           borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: Icon(
-                              _isWishlisted
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_outline_rounded,
-                              color: _isWishlisted
-                                  ? const Color(0xFFE53935)
-                                  : Colors.white,
-                              size: 22,
-                              shadows: const [
-                                Shadow(
-                                  color: Colors.black54,
-                                  blurRadius: 6,
-                                  offset: Offset(0, 1),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 1.5),
                                 ),
                               ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                _isWishlisted
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_outline_rounded,
+                                color: _isWishlisted
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF475569),
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
+
+                    // Bottom-Left: Stock Pill Badge (Shown when 5 or fewer items remaining)
+                    if (product.stock > 0 && product.stock <= 5)
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '${product.stock} left in stock',
+                            style: const TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
 
-              // 2. Details & Action Area - Tightly grouped (NO blank gap)
+              // 2. Details & Action Area
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title
-                    Text(
-                      product.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? Colors.white
-                            : const Color(0xFF1E293B),
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Vendor Row: [Farmer Avatar] Green Valley Farm [✔]
+                    // Vendor Row: Store Name + Emerald Verified Badge
                     Row(
                       children: [
-                        Container(
-                          width: 17,
-                          height: 17,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF475569)
-                                  : const Color(0xFFCBD5E1),
-                              width: 0.6,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/farmer_avatar.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: isDark
-                                    ? const Color(0xFF334155)
-                                    : const Color(0xFFE2E8F0),
-                                child: Icon(
-                                  Icons.person_rounded,
-                                  size: 11,
-                                  color: isDark
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5),
                         Flexible(
                           child: Text(
                             product.sellerName.isNotEmpty
                                 ? product.sellerName
-                                : 'Green Valley Farm',
+                                : 'Local Farm',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: isDark
                                   ? const Color(0xFF94A3B8)
-                                  : const Color(0xFF64748B),
-                              fontWeight: FontWeight.w500,
+                                  : const Color(0xFF475569),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.check_circle_rounded,
-                          size: 14,
+                          size: 13,
                           color: Color(0xFF059669),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 3),
 
-                    // Price (Red Taka) & + Add Button Row
+                    // Product Title (2-line support with ellipsis)
+                    Text(
+                      product.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: isDark
+                            ? Colors.white
+                            : const Color(0xFF0F172A),
+                        height: 1.22,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Unit & Rating Row
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Price in Red + Strikethrough
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Text(
+                          product.unit.isNotEmpty ? product.unit : '1 kg',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: Color(0xFFF59E0B),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              (product.rating > 0 ? product.rating : 4.8)
+                                  .toStringAsFixed(1),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isDark
+                                    ? Colors.white70
+                                    : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Price (Dark Taka) & Strikethrough Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '৳ ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          _formatPrice(product.price),
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w900,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        if (product.hasDiscount) ...[
+                          const SizedBox(width: 5),
+                          Text(
+                            '৳ ${_formatPrice(product.originalPrice!)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF94A3B8),
+                              decoration: TextDecoration.lineThrough,
+                              decorationColor: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Action: Mint Green Stepper or Solid Dark Green '+ Add' Button
+                    qty > 0
+                        ? Container(
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF064E3B)
+                                  : const Color(0xFFD1FAE5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  '৳ ',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFFE53935),
+                                // Minus Button (white pill)
+                                InkWell(
+                                  onTap: () => ref
+                                      .read(cartProvider.notifier)
+                                      .decrement(product.id),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 28,
+                                    height: 26,
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF1E293B)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.05),
+                                          blurRadius: 2,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.remove,
+                                      size: 14,
+                                      color: Color(0xFF047857),
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  _formatPrice(product.price),
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFFE53935),
-                                    letterSpacing: -0.3,
+
+                                // Centered Quantity Count
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6),
+                                  child: Text(
+                                    '$qty',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF047857),
+                                    ),
+                                  ),
+                                ),
+
+                                // Plus Button (solid dark green pill)
+                                InkWell(
+                                  onTap: qty >= product.stock
+                                      ? () {
+                                          ScaffoldMessenger.of(context)
+                                              .hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Only ${product.stock} units available in stock.'),
+                                              duration: const Duration(
+                                                  milliseconds: 1200),
+                                            ),
+                                          );
+                                        }
+                                      : () => ref
+                                          .read(cartProvider.notifier)
+                                          .increment(product.id),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 28,
+                                    height: 26,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF047857),
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF047857)
+                                              .withValues(alpha: 0.3),
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      Icons.add,
+                                      size: 14,
+                                      color: qty >= product.stock
+                                          ? Colors.white54
+                                          : Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            if (product.hasDiscount)
-                              Text(
-                                '৳ ${_formatPrice(product.originalPrice!)}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF94A3B8),
-                                  decoration: TextDecoration.lineThrough,
-                                  decorationColor: Color(0xFF94A3B8),
-                                ),
-                              )
-                            else
-                              const SizedBox(height: 14),
-                          ],
-                        ),
-
-                        // Quantity Stepper or Solid Green '+ Add' Button
-                        qty > 0
-                            ? Container(
-                                height: 32,
+                          )
+                        : Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _handleAddToCart,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                height: 34,
+                                alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF059669),
+                                  color: const Color(0xFF047857),
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF059669)
+                                      color: const Color(0xFF047857)
                                           .withValues(alpha: 0.25),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1.5),
                                     ),
                                   ],
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    InkWell(
-                                      onTap: () => ref
-                                          .read(cartProvider.notifier)
-                                          .decrement(product.id),
-                                      borderRadius:
-                                          const BorderRadius.horizontal(
-                                              left: Radius.circular(10)),
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 7, vertical: 6),
-                                        child: Icon(Icons.remove,
-                                            size: 14, color: Colors.white),
-                                      ),
+                                    Icon(
+                                      Icons.shopping_cart_outlined,
+                                      size: 15,
+                                      color: Colors.white,
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 4),
-                                      child: Text(
-                                        '$qty',
-                                        style: const TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    InkWell(
-                                      onTap: qty >= product.stock
-                                          ? () {
-                                              ScaffoldMessenger.of(context)
-                                                  .hideCurrentSnackBar();
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                      'Only ${product.stock} units available in stock.'),
-                                                  duration: const Duration(
-                                                      milliseconds: 1200),
-                                                ),
-                                              );
-                                            }
-                                          : () => ref
-                                              .read(cartProvider.notifier)
-                                              .increment(product.id),
-                                      borderRadius:
-                                          const BorderRadius.horizontal(
-                                              right: Radius.circular(10)),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 7, vertical: 6),
-                                        child: Icon(
-                                          Icons.add,
-                                          size: 14,
-                                          color: qty >= product.stock
-                                              ? Colors.white54
-                                              : Colors.white,
-                                        ),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      '+ Add',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        letterSpacing: -0.2,
                                       ),
                                     ),
                                   ],
-                                ),
-                              )
-                            : Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: _handleAddToCart,
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 7.5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF059669),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF059669)
-                                              .withValues(alpha: 0.25),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.add_rounded,
-                                            size: 16, color: Colors.white),
-                                        SizedBox(width: 3),
-                                        Text(
-                                          'Add',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                            letterSpacing: -0.2,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
                                 ),
                               ),
-                      ],
-                    ),
+                            ),
+                          ),
                   ],
                 ),
               ),

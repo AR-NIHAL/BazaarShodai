@@ -41,7 +41,7 @@ void main() {
     expect(find.text('Local Tomato (Deshi)'), findsOneWidget);
 
     // Verify Discount Badge
-    expect(find.text('-20%'), findsOneWidget);
+    expect(find.text('-20% OFF'), findsOneWidget);
 
     // Verify Seller Name
     expect(find.text('Green Valley Farm'), findsOneWidget);
@@ -51,8 +51,8 @@ void main() {
     expect(find.text('৳ 100'), findsOneWidget);
 
     // Verify Add Button
-    expect(find.text('Add'), findsOneWidget);
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    expect(find.text('+ Add'), findsOneWidget);
+    expect(find.byIcon(Icons.shopping_cart_outlined), findsOneWidget);
 
     // Verify Wishlist Icon
     expect(find.byIcon(Icons.favorite_outline_rounded), findsOneWidget);
@@ -83,10 +83,10 @@ void main() {
     await tester.pump();
 
     // Verify initially Add button is present
-    expect(find.text('Add'), findsOneWidget);
+    expect(find.text('+ Add'), findsOneWidget);
 
     // Tap Add button
-    await tester.tap(find.text('Add'));
+    await tester.tap(find.text('+ Add'));
     await tester.pump();
 
     // Verify Cart state updated
